@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String  @id @default(uuid())
+  email     String  @unique
+  password  String
+  name      String
+  role      Role    @default(USER)
+  loans     Loan[]
+  carts     Cart[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Item {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  quantity    Int
+  available   Int
+  imageUrl    String?
+  carts       Cart[]
+  loanItems   LoanItem[]
+  createdAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Cart {
+  id        String  @id @default(uuid())
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String
+  item      Item    @relation(fields: [itemId], references: [id])
+  itemId    String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Loan {
+  id        String  @id @default(uuid())
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String
+  reason    String
+  loanItems LoanItem[]
+  status    LoanStatus @default(PENDING)
+  verifiedBy String?
+  returnedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+}
+
+model LoanItem {
+  id        String  @id @default(uuid())
+  loan      Loan    @relation(fields: [loanId], references: [id])
+  loanId    String
+  item      Item    @relation(fields: [itemId], references: [id])
+  itemId    String
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
