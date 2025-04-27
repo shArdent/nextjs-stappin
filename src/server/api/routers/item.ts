@@ -7,10 +7,14 @@ export const itemRouter = createTRPCRouter({
     addNewItem: adminProdecure
         .input(
             z.object({
-                image: z.string().base64(),
-                name: z.string(),
-                description: z.string().optional(),
-                quantity: z.number(),
+                name: z.string({ message: "Harus berupa string" }),
+                description: z.string({ message: "Harus berupa string" }),
+                quantity: z
+                    .number({ message: "Harus Berupa angka" })
+                    .positive({ message: "Harus lebih dari 0" }),
+                image: z.string({
+                    message: "Gambar dikirim harus sudah berupa string",
+                }),
             }),
         )
         .mutation(async ({ ctx, input }) => {
@@ -20,9 +24,12 @@ export const itemRouter = createTRPCRouter({
                 where: {
                     name: input.name,
                 },
+                select: {
+                    id: true,
+                },
             });
 
-            if (exist?.name === input.name)
+            if (exist)
                 throw new TRPCError({
                     code: "CONFLICT",
                     message: `Barang dengan nama ${input.name} sudah ada`,
@@ -31,15 +38,18 @@ export const itemRouter = createTRPCRouter({
             const newItem = await db.item.create({
                 data: {
                     name: input.name,
+                    description: input.description,
                     quantity: input.quantity,
                     available: input.quantity,
                 },
             });
+
             const timestamp = new Date().getTime().toString();
-            const fileName = `avatar-${newItem.id}.jpg`;
+            const fileName = `item-${newItem.id}.jpg`;
 
             if (input.image) {
-                const buffer = Buffer.from(input.image, "base64");
+                const pureBase64 = input.image.split(",")[1];
+                const buffer = Buffer.from(pureBase64 as string, "base64");
 
                 const { data, error } = await supabaseAdminClient.storage
                     .from("item-image")
@@ -54,7 +64,7 @@ export const itemRouter = createTRPCRouter({
                         cause: error,
                     });
 
-                const profilePictureUrl = supabaseAdminClient.storage
+                const itemImageUrl = supabaseAdminClient.storage
                     .from("item-image")
                     .getPublicUrl(data.path);
 
@@ -64,9 +74,7 @@ export const itemRouter = createTRPCRouter({
                     },
                     data: {
                         imageUrl:
-                            profilePictureUrl.data.publicUrl +
-                            "?t=" +
-                            timestamp,
+                            itemImageUrl.data.publicUrl + "?t=" + timestamp,
                     },
                 });
 
@@ -127,16 +135,22 @@ export const itemRouter = createTRPCRouter({
             z.object({
                 itemId: z.string(),
                 name: z.string(),
+                quantity: z.number(),
                 description: z.string(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
             const { db } = ctx;
-            const { itemId, name, description } = input;
+            const { itemId, name, description, quantity, available } = input;
 
             const dbItem = await db.item.findUnique({
                 where: {
                     id: itemId,
+                },
+                select: {
+                    id: true,
+                    available: true,
+                    quantity: true,
                 },
             });
 
@@ -146,6 +160,14 @@ export const itemRouter = createTRPCRouter({
                     message: `Barang dengan id ${itemId} tidak ditemukan`,
                 });
 
+            if (quantity < dbItem.available) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "Kuantitas tidak boleh kurang dari barang tersedia",
+                });
+            }
+
             const updatedItem = await db.item.update({
                 where: {
                     id: itemId,
@@ -153,6 +175,8 @@ export const itemRouter = createTRPCRouter({
                 data: {
                     name,
                     description,
+                    quantity,
+                    available: available,
                 },
             });
 
@@ -197,6 +221,9 @@ export const itemRouter = createTRPCRouter({
                     where: query
                         ? { name: { contains: query, mode: "insensitive" } }
                         : undefined,
+                    orderBy: {
+                        createdAt: "asc",
+                    },
                 }),
                 db.item.count({
                     where: query

@@ -6,6 +6,7 @@ import { api } from "~/utils/api";
 import "~/styles/globals.css";
 import { ThemeProvider } from "~/components/theme-provider";
 import { Toaster } from "~/components/ui/sonner";
+import { SidebarProvider } from "~/components/ui/sidebar";
 
 const geist = Geist({
     subsets: ["latin"],
@@ -16,11 +17,13 @@ const MyApp: AppType = ({ Component, pageProps }) => {
         <div className={geist.className}>
             <ThemeProvider
                 attribute="class"
-                defaultTheme="system"
+                defaultTheme="light"
                 enableSystem
                 disableTransitionOnChange
             >
-                <Component {...pageProps} />
+                <SidebarProvider>
+                    <Component {...pageProps} />
+                </SidebarProvider>
                 <Toaster />
             </ThemeProvider>
         </div>

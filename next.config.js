@@ -17,6 +17,16 @@ const config = {
         locales: ["en"],
         defaultLocale: "en",
     },
+    images: {
+        remotePatterns: [
+            {
+                protocol: "https",
+                hostname: "dcsbzryfgkvsniujgwwe.supabase.co",
+                port: "",
+                pathname: "/storage/v1/object/public/item-image/**",
+            },
+        ],
+    },
 };
 
 export default config;

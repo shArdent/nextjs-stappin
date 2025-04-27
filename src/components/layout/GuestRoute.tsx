@@ -6,14 +6,13 @@ export const GuestRoute = (props: PropsWithChildren) => {
     const router = useRouter();
 
     useEffect(() => {
-        void (async function() {
-            const { data } = await supabase.auth.getUser()
+        void async function () {
+            const { data } = await supabase.auth.getUser();
             if (data.user) {
-                await router.replace("/")
+                await router.replace("/");
             }
-        })
-    }, [])
+        };
+    }, []);
 
-
-    return props.children
-}
+    return props.children;
+};
