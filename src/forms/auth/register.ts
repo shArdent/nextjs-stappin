@@ -3,7 +3,7 @@ import { emailSchema, passwordSchema } from "~/schemas/auth";
 
 export const registerFormSchema = z
     .object({
-        nama: z.string(),
+        name: z.string(),
         email: emailSchema,
         password: passwordSchema,
         confirmPassword: passwordSchema,

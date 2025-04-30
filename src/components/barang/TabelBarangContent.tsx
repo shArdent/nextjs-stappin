@@ -1,14 +1,12 @@
 import type { Item } from "@prisma/client";
 import Image from "next/image";
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { api } from "~/utils/api";
 import DialogBarangUpdate from "./DialogBarangUpdate";
 
 export default function TabelBarangContent({ data }: { data: Item[] }) {
-    const router = useRouter();
     const [error, setError] = useState<string | null>(null);
     const utils = api.useUtils();
 
@@ -50,24 +48,40 @@ export default function TabelBarangContent({ data }: { data: Item[] }) {
     if (data)
         return (
             <div className="overflow-x-auto">
-                <table className="w-full text-center">
-                    <thead>
-                        <tr className="bg-yellow-300 text-center">
-                            <th className="rounded-tl-lg p-2">No</th>
-                            <th className="p-2">Nama Barang</th>
-                            <th className="p-2">Gambar</th>
-                            <th className="p-2">Deskripsi</th>
-                            <th className="p-2">Jumlah Barang</th>
-                            <th className="p-2">Jumlah Barang Tersedia</th>
-                            <th className="rounded-tr-lg p-2">Aksi</th>
+                <table className="w-full border-separate border-spacing-0 text-center">
+                    <thead className="rounded bg-gray-200">
+                        <tr className="text-center">
+                            <th className="w-[5%] rounded-tl-md border border-black p-2">
+                                No
+                            </th>
+                            <th className="border border-black p-2">
+                                Nama Barang
+                            </th>
+                            <th className="border border-black p-2">Gambar</th>
+                            <th className="border border-black p-2">
+                                Deskripsi
+                            </th>
+                            <th className="w-[10%] border border-black p-2">
+                                Jumlah Barang
+                            </th>
+                            <th className="w-[10%] border border-black p-2">
+                                Jumlah Barang Tersedia
+                            </th>
+                            <th className="w-[15%] rounded-tr-lg border border-black p-2">
+                                Aksi
+                            </th>
                         </tr>
                     </thead>
                     <tbody className="bg-white">
                         {data.map((barang, index) => (
                             <tr key={barang.id} className="hover:bg-gray-100">
-                                <td className={`p-2`}>{index + 1}</td>
-                                <td className="p-2">{barang.name}</td>
-                                <td className="p-2">
+                                <td className={`border border-black p-2`}>
+                                    {index + 1}
+                                </td>
+                                <td className="border border-black p-2">
+                                    {barang.name}
+                                </td>
+                                <td className="flex items-center justify-center border border-black p-2">
                                     <Image
                                         src={
                                             barang.imageUrl ||
@@ -76,14 +90,20 @@ export default function TabelBarangContent({ data }: { data: Item[] }) {
                                         alt={barang.name}
                                         width={120}
                                         height={80}
-                                        className="object-contain"
+                                        className="object-contain w-[120px] h-[80px]"
                                     />
                                 </td>
-                                <td className="p-2">{barang.description}</td>
-                                <td className="p-2">{barang.quantity}</td>
-                                <td className="p-2">{barang.available}</td>
-                                <td className="space-x-2 p-2">
-                                    <div className="flex gap-3">
+                                <td className="border border-black p-2">
+                                    {barang.description}
+                                </td>
+                                <td className="border border-black p-2">
+                                    {barang.quantity}
+                                </td>
+                                <td className="border border-black p-2">
+                                    {barang.available}
+                                </td>
+                                <td className="space-x-2 border border-black p-2">
+                                    <div className="flex items-center justify-center gap-3">
                                         <DialogBarangUpdate
                                             currentItem={barang}
                                         />

@@ -19,7 +19,7 @@ function RegisterPage() {
     const form = useForm<RegisterFormSchema>({
         resolver: zodResolver(registerFormSchema),
         defaultValues: {
-            nama: "",
+            name: "",
             email: "",
             password: "",
             confirmPassword: "",

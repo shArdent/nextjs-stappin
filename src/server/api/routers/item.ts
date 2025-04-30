@@ -2,6 +2,8 @@ import { z } from "zod";
 import { adminProdecure, createTRPCRouter, privateProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { supabaseAdminClient } from "~/lib/supabase/server";
+import { LoanStatus } from "@prisma/client";
+import { endOfMonth, startOfMonth } from "date-fns";
 
 export const itemRouter = createTRPCRouter({
     addNewItem: adminProdecure
@@ -137,6 +139,7 @@ export const itemRouter = createTRPCRouter({
                 name: z.string(),
                 quantity: z.number(),
                 description: z.string(),
+                available: z.number(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
@@ -238,5 +241,144 @@ export const itemRouter = createTRPCRouter({
                 totalPages: Math.ceil(totalItems / 10),
                 currentPage: page,
             };
+        }),
+
+    getDashboard: adminProdecure.query(async ({ ctx }) => {
+        const { db, user } = ctx;
+
+        const result = await db.$transaction(async (tx) => {
+            const [
+                loanCount,
+                itemCount,
+                loanPendingCount,
+                loansPerMonth,
+                loanItems,
+            ] = await Promise.all([
+                tx.loan.aggregate({
+                    _count: true,
+                }),
+                tx.item.aggregate({
+                    _count: true,
+                }),
+                tx.loan.aggregate({
+                    where: {
+                        status: LoanStatus.PENDING,
+                    },
+                    _count: true,
+                }),
+                tx.loan.groupBy({
+                    by: ["startAt"],
+                    _count: {
+                        id: true,
+                    },
+                    orderBy: {
+                        startAt: "asc",
+                    },
+                }),
+                tx.loanItem.findMany({
+                    include: {
+                        item: true,
+                        loan: true,
+                    },
+                }),
+            ]);
+
+            const loansGroupedByMonthArray = Object.entries(
+                loansPerMonth.reduce(
+                    (acc, loan) => {
+                        const date = new Date(loan.startAt);
+                        const month = date.toLocaleString("default", {
+                            month: "long",
+                        });
+                        const year = date.getFullYear();
+                        const key = `${month} ${year}`;
+
+                        acc[key] = (acc[key] || 0) + loan._count.id;
+                        return acc;
+                    },
+                    {} as Record<string, number>,
+                ),
+            )
+                .map(([month, count]) => ({ month, count }))
+                .sort((a, b) =>
+                    new Date(`1 ${a.month}`) > new Date(`1 ${b.month}`)
+                        ? 1
+                        : -1,
+                );
+
+            const frequencyItemPerMonthArray = Object.entries(
+                loanItems.reduce(
+                    (acc, loanItem) => {
+                        const date = new Date(loanItem.loan.startAt);
+                        const month = date.toLocaleString("default", {
+                            month: "long",
+                        });
+                        const year = date.getFullYear();
+                        const key = `${month} ${year}`;
+
+                        acc[key] = (acc[key] || 0) + 1;
+                        return acc;
+                    },
+                    {} as Record<string, number>,
+                ),
+            )
+                .map(([month, count]) => ({ month, count }))
+                .sort((a, b) =>
+                    new Date(`1 ${a.month}`) > new Date(`1 ${b.month}`)
+                        ? 1
+                        : -1,
+                );
+
+            return {
+                loanCount,
+                itemCount,
+                loanPendingCount,
+                loansGroupedByMonthArray,
+                frequencyItemPerMonthArray,
+            };
+        });
+
+        return result;
+    }),
+
+    itemPerMonth: adminProdecure
+        .input(z.date())
+        .query(async ({ ctx, input }) => {
+            const { db } = ctx;
+
+            const start = startOfMonth(input);
+            const end = endOfMonth(input);
+
+            const data = await db.loanItem.groupBy({
+                by: ["itemId"],
+                where: {
+                    loan: {
+                        startAt: {
+                            gte: start,
+                            lte: end,
+                        },
+                    },
+                },
+                _sum: {
+                    quantity: true,
+                },
+            });
+
+            const results = await Promise.all(
+                data.map(async (group) => {
+                    const item = await db.item.findUnique({
+                        where: { id: group.itemId },
+                        select: { name: true },
+                    });
+
+                    return {
+                        itemId: group.itemId,
+                        name: item?.name ?? "Unknown",
+                        quantity: group._sum.quantity ?? 0,
+                    };
+                }),
+            );
+
+            return results;
         }),
 });

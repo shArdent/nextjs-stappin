@@ -59,15 +59,14 @@ export default function CartHover() {
                             data?.cartItems.map((cartItem) => (
                                 <div
                                     key={cartItem.id}
-                                    className="mb-3 flex gap-3 items-center"
+                                    className="mb-3 flex items-center gap-3"
                                 >
                                     <Image
                                         src={cartItem.item.imageUrl!}
                                         alt={cartItem.item.name}
                                         width={50}
                                         height={50}
-                                        className={"rounded"}
-
+                                        className={"h-[50px] w-[50px] rounded"}
                                     />
                                     <div className="flex w-full items-center justify-between">
                                         <p className="truncate font-medium">

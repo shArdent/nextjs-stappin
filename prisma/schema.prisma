@@ -16,6 +16,7 @@ model User {
   email     String  @unique
   password  String
   name      String
+  phone     String?  
   role      Role    @default(USER)
   loans     Loan[]
   carts     Cart[]
@@ -61,6 +62,7 @@ model Loan {
   status    LoanStatus @default(PENDING)
   verifiedBy String?
   returnedAt DateTime
+  startAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

@@ -1,3 +1,4 @@
+import type { LoanStatus } from "@prisma/client";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -14,3 +15,16 @@ export function fileToBase64(file: File): Promise<string> {
     reader.onerror = (error) => reject(error);
   });
 }
+
+export const textStyle = (status: LoanStatus) => {
+    switch (status) {
+        case "PENDING":
+            return "text-yellow-500";
+        case "APPROVED":
+            return "text-green-500";
+        case "REJECTED":
+            return "text-red-500";
+        case "RETURNED":
+            return "text-blue-500";
+    }
+};

@@ -4,220 +4,351 @@ import { TRPCError } from "@trpc/server";
 import { LoanStatus } from "@prisma/client";
 
 export const loanRouter = createTRPCRouter({
-  borrow: privateProcedure
-    .input(
-      z.object({
-        reqItems: z
-          .array(
-            z.object({
-              id: z.string(),
-              quantity: z.number(),
-            }),
-          )
-          .nonempty(),
-        returnedAt: z.date(),
-        reason: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { db, user } = ctx;
-      const { reqItems, returnedAt, reason } = input;
-      const reqItemIds = reqItems.map((item) => item.id);
+    getUserLoan: privateProcedure.query(async ({ ctx }) => {
+        const { db, user } = ctx;
 
-      await db.$transaction(async (tx) => {
-        const userId = user?.id as string;
-
-        const dbItems: { id: string; quantity: number }[] =
-          await tx.item.findMany({
+        const loanData = await db.loan.findMany({
             where: {
-              id: {
-                in: reqItemIds,
-              },
+                userId: user?.id,
             },
-            select: {
-              id: true,
-              quantity: true,
+            include: {
+                loanItems: {
+                    include: {
+                        item: true,
+                    },
+                },
+                user: {
+                    select: {
+                        name: true,
+                    },
+                },
             },
-          });
+            orderBy: {
+                createdAt: "asc",
+            },
+        });
 
-        const dbItemMap = dbItems.reduce((map, item) => {
-          map.set(item.id, item.quantity);
-          return map;
-        }, new Map<string, number>());
+        return loanData;
+    }),
 
-        for (const reqItem of reqItems) {
-          const stock = dbItemMap.get(reqItem.id);
-          if (!stock || stock < reqItem.quantity) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Terdapat barang yang tidak tersedia pada permintaan",
+    getLoanById: privateProcedure
+        .input(z.string())
+        .query(async ({ ctx, input }) => {
+            const { db } = ctx;
+
+            const data = await db.loan.findUnique({
+                where: {
+                    id: input,
+                },
+
+                include: {
+                    user: {
+                        select: {
+                            name: true,
+                            email: true,
+                            phone: true,
+                        },
+                    },
+                    loanItems: {
+                        include: {
+                            item: true,
+                        },
+                    },
+                },
             });
-          }
-        }
 
-        const { id: loanId } = await tx.loan.create({
-          data: {
-            userId: userId,
-            reason,
-            returnedAt,
-          },
-        });
+            return data;
+        }),
 
-        const loanItems = reqItems.map((item) => ({
-          loanId,
-          itemId: item.id,
-          quantity: item.quantity,
-        }));
+    getPendingLoan: privateProcedure.query(async ({ ctx }) => {
+        const { db } = ctx;
 
-        await tx.loanItem.createMany({
-          data: loanItems,
-        });
-
-        await Promise.all(
-          reqItems.map((item) =>
-            tx.item.update({
-              where: {
-                id: item.id,
-              },
-              data: {
-                available: {
-                  decrement: item.quantity,
+        const data = await db.loan.findMany({
+            where: {
+                status: LoanStatus.PENDING,
+            },
+            include: {
+                loanItems: {
+                    include: {
+                        item: true,
+                    },
                 },
-              },
-            }),
-          ),
-        );
+                user: true,
+            },
+            orderBy: {
+                createdAt: "asc",
+            },
+        });
 
-        return { loanId };
-      });
+        return data;
     }),
 
-  approveLoanReq: adminProdecure
-    .input(
-      z.object({
-        loanId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { db, user } = ctx;
-      const adminId = user?.id;
+    getAllLoan: adminProdecure.query(async ({ ctx }) => {
+        const { db } = ctx;
 
-      const loan = await db.loan.findUnique({ where: { id: input.loanId } });
-
-      if (!loan)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Peminjaman tidak ditemukan",
-        });
-
-      if (loan.status !== LoanStatus.PENDING)
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Peminjaman sudah diverifikasi",
-        });
-
-      const verifiedLoan = await db.loan.update({
-        where: {
-          id: input.loanId,
-        },
-        data: {
-          status: LoanStatus.APPROVED,
-          verifiedBy: adminId,
-        },
-      });
-      return verifiedLoan;
-    }),
-
-  rejectLoanReq: adminProdecure
-    .input(
-      z.object({
-        loanId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { db, user } = ctx;
-      const adminId = user?.id;
-      const loan = await db.loan.findUnique({ where: { id: input.loanId } });
-
-      if (!loan)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Peminjaman tidak ditemukan",
-        });
-
-      if (loan.status !== LoanStatus.PENDING)
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Peminjaman sudah diverifikasi",
-        });
-
-      const rejectedLoan = await db.loan.update({
-        where: {
-          id: input.loanId,
-        },
-        data: {
-          status: LoanStatus.REJECTED,
-          verifiedBy: adminId,
-        },
-      });
-
-      return rejectedLoan;
-    }),
-
-  returnLoanReq: adminProdecure
-    .input(
-      z.object({
-        loanId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { db, user } = ctx;
-      const adminId = user?.id;
-      await db.$transaction(async (tx) => {
-        const loan = await tx.loan.findUnique({ where: { id: input.loanId } });
-        if (!loan)
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Peminjaman tidak ditemukan",
-          });
-
-        if (loan.status !== LoanStatus.APPROVED)
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Status peminjaman tidak valid",
-          });
-        const loanItems = await tx.loanItem.findMany({
-          where: {
-            loanId: loan.id,
-          },
-        });
-
-        await Promise.all(
-          loanItems.map((item) =>
-            tx.item.update({
-              where: {
-                id: item.itemId,
-              },
-              data: {
-                available: {
-                  increment: item.quantity,
+        const data = await db.loan.findMany({
+            include: {
+                loanItems: {
+                    include: {
+                        item: true,
+                    },
                 },
-              },
-            }),
-          ),
-        );
-
-        const updatedLoan = await tx.loan.update({
-          where: {
-            id: loan.id,
-          },
-          data: {
-            status: LoanStatus.RETURNED,
-            verifiedBy: adminId,
-          },
+                user: true,
+            },
+            orderBy: {
+                createdAt: "asc",
+            },
         });
 
-        return updatedLoan;
-      });
+        return data;
     }),
+
+    borrow: privateProcedure
+        .input(
+            z.object({
+                reqItems: z
+                    .array(
+                        z.object({
+                            quantity: z.number(),
+                            itemId: z.string(),
+                        }),
+                    )
+                    .nonempty(),
+                loan: z.object({
+                    startAt: z.date(),
+                    returnedAt: z.date(),
+                    reason: z.string(),
+                }),
+            }),
+        )
+        .output(z.object({ loanId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            const { db, user } = ctx;
+            const { reqItems, loan } = input;
+
+            if (loan.startAt > loan.returnedAt) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "Tanggal pengembalian harus setelah tanggal peminjaman",
+                });
+            }
+
+            const result = await db.$transaction(async (tx) => {
+                const userId = user?.id as string;
+
+                const reqItemIds = reqItems.map((e) => e.itemId);
+
+                const { id: loanId } = await tx.loan.create({
+                    data: {
+                        userId: userId,
+                        reason: loan.reason,
+                        returnedAt: loan.returnedAt,
+                        startAt: loan.startAt,
+                    },
+                });
+
+                const dbItems = await tx.item.findMany({
+                    where: {
+                        id: {
+                            in: reqItemIds,
+                        },
+                    },
+                    select: {
+                        id: true,
+                        available: true,
+                    },
+                });
+
+                const dbItemMap = new Map(
+                    dbItems.map((item) => [item.id, item.available]),
+                );
+
+                console.log(dbItemMap);
+
+                for (const reqItem of reqItems) {
+                    const stock = dbItemMap.get(reqItem.itemId);
+                    if (!stock || stock < reqItem.quantity) {
+                        throw new TRPCError({
+                            code: "BAD_REQUEST",
+                            message:
+                                "Terdapat barang yang tidak tersedia pada permintaan",
+                        });
+                    }
+                }
+
+                const loanItems = reqItems.map((item) => ({
+                    loanId,
+                    itemId: item.itemId,
+                    quantity: item.quantity,
+                }));
+
+                await tx.loanItem.createMany({
+                    data: loanItems,
+                });
+
+                await Promise.all(
+                    reqItems.map((item) =>
+                        tx.item.update({
+                            where: {
+                                id: item.itemId,
+                            },
+                            data: {
+                                available: {
+                                    decrement: item.quantity,
+                                },
+                            },
+                        }),
+                    ),
+                );
+
+                return { loanId };
+            });
+
+            return result;
+        }),
+
+    approveLoanReqById: adminProdecure
+        .input(z.string())
+        .mutation(async ({ ctx, input }) => {
+            const { db, user } = ctx;
+            const adminId = user?.id;
+
+            const loan = await db.loan.findUnique({
+                where: { id: input },
+            });
+
+            if (!loan)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Peminjaman tidak ditemukan",
+                });
+
+            if (loan.status !== LoanStatus.PENDING)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Peminjaman sudah diverifikasi",
+                });
+
+            const verifiedLoan = await db.loan.update({
+                where: {
+                    id: input,
+                },
+                data: {
+                    status: LoanStatus.APPROVED,
+                    verifiedBy: adminId,
+                },
+            });
+            return verifiedLoan;
+        }),
+
+    rejectLoanReqById: adminProdecure
+        .input(z.string())
+        .mutation(async ({ ctx, input }) => {
+            const { db, user } = ctx;
+            const adminId = user?.id;
+
+            const rejected = await db.$transaction(async (tx) => {
+                const loan = await tx.loan.findUnique({
+                    where: { id: input },
+                    include: {
+                        loanItems: true,
+                    },
+                });
+                if (!loan)
+                    throw new TRPCError({
+                        code: "NOT_FOUND",
+                        message: "Peminjaman tidak ditemukan",
+                    });
+
+                if (loan.status !== LoanStatus.PENDING)
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Peminjaman sudah diverifikasi",
+                    });
+
+                await Promise.all(
+                    loan.loanItems.map((item) =>
+                        tx.item.update({
+                            where: {
+                                id: item.itemId,
+                            },
+                            data: {
+                                available: {
+                                    increment: item.quantity,
+                                },
+                            },
+                        }),
+                    ),
+                );
+
+                const rejectedLoan = await tx.loan.update({
+                    where: {
+                        id: input,
+                    },
+                    data: {
+                        status: LoanStatus.REJECTED,
+                        verifiedBy: adminId,
+                    },
+                });
+                return rejectedLoan;
+            });
+
+            return rejected;
+        }),
+
+    returnLoanReqById: adminProdecure
+        .input(z.string())
+        .mutation(async ({ ctx, input }) => {
+            const { db, user } = ctx;
+            const adminId = user?.id;
+            await db.$transaction(async (tx) => {
+                const loan = await tx.loan.findUnique({
+                    where: { id: input },
+                });
+                if (!loan)
+                    throw new TRPCError({
+                        code: "NOT_FOUND",
+                        message: "Peminjaman tidak ditemukan",
+                    });
+
+                if (loan.status !== LoanStatus.APPROVED)
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Status peminjaman tidak valid",
+                    });
+                const loanItems = await tx.loanItem.findMany({
+                    where: {
+                        loanId: loan.id,
+                    },
+                });
+
+                await Promise.all(
+                    loanItems.map((item) =>
+                        tx.item.update({
+                            where: {
+                                id: item.itemId,
+                            },
+                            data: {
+                                available: {
+                                    increment: item.quantity,
+                                },
+                            },
+                        }),
+                    ),
+                );
+
+                const updatedLoan = await tx.loan.update({
+                    where: {
+                        id: loan.id,
+                    },
+                    data: {
+                        status: LoanStatus.RETURNED,
+                        verifiedBy: adminId,
+                    },
+                });
+
+                return updatedLoan;
+            });
+        }),
 });

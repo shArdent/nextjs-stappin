@@ -33,7 +33,7 @@ export const RegisterFormInner = (props: RegisterFormInnerProps) => {
             >
                 <FormField
                     control={form.control}
-                    name="nama"
+                    name="name"
                     render={({ field }) => (
                         <FormItem className="gap-2">
                             <FormLabel>Nama Lengkap</FormLabel>

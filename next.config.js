@@ -25,6 +25,11 @@ const config = {
                 port: "",
                 pathname: "/storage/v1/object/public/item-image/**",
             },
+            {
+                protocol: "https",
+                hostname: "picsum.photos",
+                pathname: "/seed/**"
+            }
         ],
     },
 };

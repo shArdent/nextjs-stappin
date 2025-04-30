@@ -25,8 +25,9 @@ import { db } from "~/server/db";
  */
 
 type CreateContextOptions = {
-  db: PrismaClient | null;
-  user: User | null;
+    db: PrismaClient | null;
+    user: User | null;
+    sbServer: any;
 };
 
 /**
@@ -40,10 +41,11 @@ type CreateContextOptions = {
  * @see https://create.t3.gg/en/usage/trpc#-serverapitrpcts
  */
 const createInnerTRPCContext = (_opts: CreateContextOptions) => {
-  return {
-    db,
-    user: _opts.user,
-  };
+    return {
+        db,
+        user: _opts.user,
+        sbServer: _opts.sbServer,
+    };
 };
 
 /**
@@ -53,16 +55,17 @@ const createInnerTRPCContext = (_opts: CreateContextOptions) => {
  * @see https://trpc.io/docs/context
  */
 export const createTRPCContext = async (_opts: CreateNextContextOptions) => {
-  const supabaseServerClient = createSSRClient({
-    req: _opts.req,
-    res: _opts.res,
-  });
+    const supabaseServerClient = createSSRClient({
+        req: _opts.req,
+        res: _opts.res,
+    });
 
-  const { data } = await supabaseServerClient.auth.getUser();
-  return createInnerTRPCContext({
-    db,
-    user: data.user,
-  });
+    const { data } = await supabaseServerClient.auth.getUser();
+    return createInnerTRPCContext({
+        db,
+        user: data.user,
+        sbServer: supabaseServerClient,
+    });
 };
 
 /**
@@ -74,17 +77,19 @@ export const createTRPCContext = async (_opts: CreateNextContextOptions) => {
  */
 
 const t = initTRPC.context<typeof createTRPCContext>().create({
-  transformer: superjson,
-  errorFormatter({ shape, error }) {
-    return {
-      ...shape,
-      data: {
-        ...shape.data,
-        zodError:
-          error.cause instanceof ZodError ? error.cause.flatten() : null,
-      },
-    };
-  },
+    transformer: superjson,
+    errorFormatter({ shape, error }) {
+        return {
+            ...shape,
+            data: {
+                ...shape.data,
+                zodError:
+                    error.cause instanceof ZodError
+                        ? error.cause.flatten()
+                        : null,
+            },
+        };
+    },
 });
 
 /**
@@ -115,34 +120,47 @@ export const createTRPCRouter = t.router;
  * network latency that would occur in production but not in local development.
  */
 const timingMiddleware = t.middleware(async ({ next, path }) => {
-  const start = Date.now();
+    const start = Date.now();
 
-  if (t._config.isDev) {
-    // artificial delay in dev
-    const waitMs = Math.floor(Math.random() * 400) + 100;
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
-  }
+    if (t._config.isDev) {
+        // artificial delay in dev
+        const waitMs = Math.floor(Math.random() * 400) + 100;
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
 
-  const result = await next();
+    const result = await next();
 
-  const end = Date.now();
-  console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
+    const end = Date.now();
+    console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
 
-  return result;
+    return result;
 });
 
 const authMiddleware = t.middleware(async ({ ctx, next }) => {
-  if (!ctx.user)
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "user unauthorized" });
+    if (!ctx.user)
+        throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "user unauthorized",
+        });
 
-  return await next();
+    return await next();
 });
 
 const adminMiddleware = t.middleware(async ({ ctx, next }) => {
-  const role = ctx.user?.role;
-  if (!ctx.user && role !== "ADMIN")
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "user unauthorized" });
-  return await next();
+    const res = await ctx.db.user.findUnique({
+        where: {
+            id: ctx.user?.id,
+        },
+        select: {
+            role: true,
+        },
+    });
+    if (!ctx.user && res?.role !== "ADMIN")
+        throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "user unauthorized",
+        });
+    return await next();
 });
 
 /**

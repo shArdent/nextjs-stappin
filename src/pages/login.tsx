@@ -30,7 +30,7 @@ const login = () => {
 
             if (error) throw error;
 
-            await router.replace("/");
+            await router.replace("/catalog");
         } catch (error) {
             console.log(error);
             switch ((error as AuthError).code) {

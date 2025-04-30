@@ -1,11 +1,95 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 import BorrowingTable from "~/components/layout/BorrowingTable";
-
-import { api } from "~/utils/api";
+import { env } from "~/env";
 
 export default function Home() {
+    const getData = async () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
 
+        const supabase = createClient(
+            env.NEXT_PUBLIC_SUPABASE_URL!,
+            env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        );
+
+        const returnDate = tomorrow.toISOString();
+        const { data: loanData, error: loanError } = await supabase
+            .from("Loan")
+            .select("*")
+            .eq("returnedAt", returnDate);
+
+        console.log(loanData);
+
+        if (!loanData) return;
+
+        const loansWithEmail = await Promise.all(
+            loanData.map(async (loan) => {
+                const { data: profile } = await supabase
+                    .from("User")
+                    .select("email")
+                    .eq("id", loan.userId)
+                    .single();
+
+                return {
+                    ...loan,
+                    email: profile?.email,
+                };
+            }),
+        );
+
+        const loansWithItem = await Promise.all(
+            loansWithEmail.map(async (loan) => {
+                const { data: items, error } = await supabase
+                    .from("LoanItem")
+                    .select(
+                        `
+        id,
+        loanId,
+        itemId,
+        Item (
+          id,
+          name
+        )
+      `,
+                    )
+                    .eq("loanId", loan.id);
+
+                if (error) {
+                    console.error(
+                        `Error fetching items for loan ${loan.id}:`,
+                        error,
+                    );
+                    return {
+                        ...loan,
+                        items: [],
+                    };
+                }
+
+                return {
+                    ...loan,
+                    items,
+                };
+            }),
+        );
+
+        const loansWithJoinedNames = loansWithItem.map((loan) => {
+            const joinedNames = loan.items.map((i) => i.Item.name).join(", ");
+            return {
+                ...loan,
+                itemJoinedName: joinedNames,
+            };
+        });
+
+        console.log(loansWithJoinedNames);
+    };
+
+    useEffect(() => {
+        getData();
+    }, []);
     return (
         <>
             <Head>
@@ -58,11 +142,7 @@ export default function Home() {
                             </div>
                         </Link>
                     </div>
-                    <p className="text-2xl text-white">
-                        {hello.data
-                            ? hello.data.greeting
-                            : "Loading tRPC query..."}
-                    </p>
+                    <p className="text-2xl text-white"></p>
                 </div>
                 <BorrowingTable />
             </main>

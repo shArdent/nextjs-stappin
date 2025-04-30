@@ -1,13 +1,30 @@
-import { CircleUser, ShoppingCart } from "lucide-react";
+import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import CartHover from "~/components/catalog/CartHover";
-import SearchBar from "~/components/navbar/SearchBar";
+import ProfilePopOver from "~/components/navbar/ProfilePopOver";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 
-const Navbar = () => {
+const Navbar = ({
+    onSearchChange,
+}: {
+    onSearchChange: (q: string) => void;
+}) => {
+    const [query, setQuery] = useState("");
+
+    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setQuery(value);
+        onSearchChange(value); // notify parent
+    };
     return (
-        <div className="bg-background flex items-center gap-10 px-20 py-6 z-40">
-            <Link href={"/catalog"} className="flex w-auto items-center pr-20 gap-5">
+        <div className="bg-background z-40 flex items-center gap-10 px-20 py-6">
+            <Link
+                href={"/catalog"}
+                className="flex w-auto items-center gap-5 pr-20"
+            >
                 <Image
                     src={"/images/logo.svg"}
                     width={90}
@@ -18,11 +35,22 @@ const Navbar = () => {
                     Stapin Maunc
                 </h1>
             </Link>
-            <SearchBar />
-            <div className="flex items-center gap-8">
+            <div className="relative w-full">
+                <Input
+                    className="h-12 w-full rounded border-none bg-white shadow-md"
+                    placeholder="cari komponen"
+                    onChange={handleSearch}
+                />
+                <Button
+                    variant={"secondary"}
+                    className="absolute top-[50%] right-3 translate-y-[-50%]"
+                >
+                    <Search />
+                </Button>
+            </div>
+            <div className="flex w-[40%] items-center gap-8">
                 <CartHover />
-                <CircleUser width={40} height={40} strokeWidth={1.25} />
-                <h1 className="text-xl">nama</h1>
+                <ProfilePopOver />
             </div>
         </div>
     );

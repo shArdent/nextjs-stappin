@@ -5,15 +5,17 @@ import { supabase } from "~/lib/supabase/client";
 export const AuthRoute = (props: PropsWithChildren) => {
     const router = useRouter();
 
+    const getUser = async () => {
+        const { data } = await supabase.auth.getUser();
+        console.log(data);
+        if (!data.user) {
+            router.push("/");
+        }
+    };
+
     useEffect(() => {
-        void (async function() {
-            const { data } = await supabase.auth.getUser()
-            if (!data.user) {
-                await router.replace("/")
-            }
-        })
-    }, [])
+        getUser();
+    }, []);
 
-
-    return props.children
-}
+    return props.children;
+};

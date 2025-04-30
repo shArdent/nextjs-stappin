@@ -41,7 +41,7 @@ const CartItem = ({
     return (
         <div className="flex w-full gap-5 rounded border p-4">
             <Image
-                className="h-full w-[170px] rounded border border-[#DBDBDB] p-2"
+                className="h-[170px] w-[170px] rounded border border-[#DBDBDB] p-2"
                 height={170}
                 width={170}
                 src={cartItem.item.imageUrl!}
@@ -51,9 +51,7 @@ const CartItem = ({
                 <h1 className="text-xl font-semibold">{cartItem.item.name}</h1>
                 <p className="text-sm">{cartItem.item.description}</p>
                 <div className="flex w-full items-center justify-between">
-                    <p className="text-sm">
-                        Kuantitas: {cartItem.quantity}
-                    </p>
+                    <p className="text-sm">Kuantitas: {cartItem.quantity}</p>
 
                     <div className="flex items-center">
                         <button
@@ -63,9 +61,9 @@ const CartItem = ({
                                 deleteCartItemPending
                             }
                             className="mr-3 cursor-pointer border px-1 py-1 disabled:opacity-60"
-                            onClick={() =>
-                                deleteCartItem({ cartId: cartItem.id })
-                            }
+                            onClick={() => {
+                                deleteCartItem({ cartId: cartItem.id });
+                            }}
                         >
                             <Trash />
                         </button>
@@ -73,15 +71,22 @@ const CartItem = ({
                             disabled={
                                 incrementPending ||
                                 decrementPending ||
-                                deleteCartItemPending
+                                deleteCartItemPending ||
+                                cartItem.quantity < 2
                             }
                             className="cursor-pointer border px-3 py-1 disabled:opacity-60"
-                            onClick={() =>
+                            onClick={() => {
+                                if (cartItem.quantity < 2) {
+                                    toast.error(
+                                        "Jumlah barang tidak bisa kurang dari 1. Gunakan tombol hapus jika ingin menghapus barang",
+                                    );
+                                    return;
+                                }
                                 decreaseItemCount({
                                     cartId: cartItem.id,
                                     increment: 1,
-                                })
-                            }
+                                });
+                            }}
                         >
                             -
                         </button>

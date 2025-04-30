@@ -6,7 +6,7 @@ const SearchBar = () => {
     return (
         <div className="relative w-full">
             <Input
-                className="h-12 w-full rounded-xs border-none bg-white shadow-md"
+                className="h-12 w-full rounded border-none bg-white shadow-md"
                 placeholder="cari komponen"
             />
             <Button
