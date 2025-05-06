@@ -2,6 +2,7 @@ import { Archive, Database, Inbox, LayoutDashboard } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 
 import {
@@ -45,7 +46,14 @@ const items = [
 const AdminSidebar = () => {
     const router = useRouter();
 
-    const { mutate } = api.auth.logoutUser.useMutation();
+    const { mutate } = api.auth.logoutUser.useMutation({
+        onSuccess: async () => {
+            await router.replace("/login");
+        },
+        onError: () => {
+            toast.error("Gagal melakukan logout");
+        },
+    });
     return (
         <Sidebar collapsible="offcanvas">
             <SidebarHeader>
@@ -89,9 +97,10 @@ const AdminSidebar = () => {
                 </SidebarGroup>
                 <SidebarFooter>
                     <Button
-                        onClick={async () => {
+                        onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             mutate();
-                            router.push("/login");
                         }}
                         variant={"yellow"}
                     >

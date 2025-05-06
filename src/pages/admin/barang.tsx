@@ -1,11 +1,18 @@
 import type { Item } from "@prisma/client";
+import { useState } from "react";
 import DialogInputBarang from "~/components/barang/DialogBarang";
 import TabelBarang from "~/components/barang/TabelBarang";
 import AdminLayout from "~/components/layout/Admin/AdminLayout";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { api } from "~/utils/api";
 
 const barang = () => {
-    const { data, isPending } = api.item.getItems.useQuery({});
+    const [search, setSearch] = useState("");
+
+    const { data, isPending } = api.item.getItems.useQuery({
+        query: search === "" ? undefined : search,
+    });
 
     return (
         <AdminLayout>
@@ -17,10 +24,19 @@ const barang = () => {
                         barang di Stappin MAUNC
                     </h2>
                 </div>
-
-                <div>
-                    <DialogInputBarang />
+                <div className="w-full max-w-md space-y-1">
+                    <Label className="text-sm font-medium">
+                        Cari Nama Barang
+                    </Label>
+                    <Input
+                        placeholder="Cari nama barang..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="bg-white"
+                    />
                 </div>
+
+                <DialogInputBarang />
                 <TabelBarang data={data?.items as Item[]} />
             </div>
         </AdminLayout>

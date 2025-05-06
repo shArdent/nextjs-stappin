@@ -5,6 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { textStyle } from "~/lib/utils";
 import { api } from "~/utils/api";
+import RejectionDialog from "./RejectionDialog";
 
 const TabelPeminjam = ({
     data,
@@ -34,18 +35,7 @@ const TabelPeminjam = ({
             },
         });
 
-    const { mutate: reject, isPending: rejectIsPending } =
-        api.loan.rejectLoanReqById.useMutation({
-            onSuccess: () => {
-                toast.success("Berhasil menolak peminjaman");
-                util.loan.getPendingLoan.invalidate();
-            },
-            onError: () => {
-                toast.error("Gagal menolak peminjmaan");
-            },
-        });
-
-    if (!data) return <Skeleton className="h-40 w-full" />;
+        if (!data) return <Skeleton className="h-40 w-full" />;
 
     if (data && data.length === 0) {
         return (
@@ -89,7 +79,7 @@ const TabelPeminjam = ({
                             {e.user.name}
                         </td>
                         <td className="border border-black p-2 text-center">
-                            <ol className="flex list-disc flex-col items-start pl-7 justify-center text-left">
+                            <ol className="flex list-disc flex-col items-start justify-center pl-7 text-left">
                                 {e.loanItems.map((loanItem) => (
                                     <li>{loanItem.item.name}</li>
                                 ))}
@@ -104,22 +94,14 @@ const TabelPeminjam = ({
                             <div className="w-ful flex justify-center gap-4">
                                 <Button
                                     disabled={
-                                        rejectIsPending || approveIsPending
+                                         approveIsPending
                                     }
                                     onClick={() => approve(e.id)}
                                     className="bg-green-500 hover:bg-green-500/80"
                                 >
                                     Setujui
                                 </Button>
-                                <Button
-                                    disabled={
-                                        rejectIsPending || approveIsPending
-                                    }
-                                    onClick={() => reject(e.id)}
-                                    variant={"destructive"}
-                                >
-                                    Tolak
-                                </Button>
+                                <RejectionDialog id={e.id} />
                             </div>
                         </td>
                     </tr>

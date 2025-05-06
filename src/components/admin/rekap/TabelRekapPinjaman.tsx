@@ -46,7 +46,7 @@ const TabelRekapPinjaman = ({
         return (
             <div className="rounded-md border p-8 text-center">
                 <p className="text-lg text-black">
-                    Tidak ada data produk yang tersedia
+                    Tidak ada data yang tersedia
                 </p>
             </div>
         );

@@ -9,18 +9,20 @@ import { Input } from "~/components/ui/input";
 
 const Navbar = ({
     onSearchChange,
+    displaySearch,
 }: {
-    onSearchChange: (q: string) => void;
+    onSearchChange?: (q: string) => void;
+    displaySearch?: boolean;
 }) => {
     const [query, setQuery] = useState("");
 
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setQuery(value);
-        onSearchChange(value); // notify parent
+        if (displaySearch && onSearchChange) onSearchChange(value); // notify parent
     };
     return (
-        <div className="bg-background z-40 flex items-center gap-10 px-20 py-6">
+        <div className="bg-background z-40 flex justify-between items-center gap-10 px-20 py-6">
             <Link
                 href={"/catalog"}
                 className="flex w-auto items-center gap-5 pr-20"
@@ -35,20 +37,23 @@ const Navbar = ({
                     Stapin Maunc
                 </h1>
             </Link>
-            <div className="relative w-full">
-                <Input
-                    className="h-12 w-full rounded border-none bg-white shadow-md"
-                    placeholder="cari komponen"
-                    onChange={handleSearch}
-                />
-                <Button
-                    variant={"secondary"}
-                    className="absolute top-[50%] right-3 translate-y-[-50%]"
-                >
-                    <Search />
-                </Button>
-            </div>
-            <div className="flex w-[40%] items-center gap-8">
+            {displaySearch && (
+                <div className="relative w-full">
+                    <Input
+                        className="h-12 w-full rounded border-none bg-white shadow-md"
+                        placeholder="cari komponen"
+                        onChange={handleSearch}
+                    />
+                    <Button
+                        variant={"secondary"}
+                        className="absolute top-[50%] right-3 translate-y-[-50%]"
+                    >
+                        <Search />
+                    </Button>
+                </div>
+            )}
+
+            <div className="flex w-[40%] justify-end items-center gap-8">
                 <CartHover />
                 <ProfilePopOver />
             </div>

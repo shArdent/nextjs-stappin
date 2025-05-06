@@ -28,6 +28,9 @@ export async function middleware(req: NextRequest) {
     const { data } = await supabase.auth.getUser();
     const pathname = req.nextUrl.pathname;
 
+    if (pathname === "/") {
+        return NextResponse.redirect(new URL("/catalog", req.url));
+    }
     // --- Route login & register: hanya untuk yang belum login ---
     if (pathname.startsWith("/login") || pathname.startsWith("/register")) {
         if (data.user) {
@@ -81,6 +84,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
     matcher: [
+        "/",
         "/login",
         "/register",
         "/admin/:path*",

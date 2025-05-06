@@ -2,6 +2,11 @@ import { z } from "zod";
 import { adminProdecure, createTRPCRouter, privateProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { LoanStatus } from "@prisma/client";
+import { resend } from "~/lib/resend";
+import { pretty, render } from "@react-email/render";
+import LoanConfirmationEmail from "~/components/emails/LoanConfirmationEmail";
+import React from "react";
+import LoanRejectionEmail from "~/components/emails/LoanRejectionEmail";
 
 export const loanRouter = createTRPCRouter({
     getUserLoan: privateProcedure.query(async ({ ctx }) => {
@@ -83,25 +88,63 @@ export const loanRouter = createTRPCRouter({
         return data;
     }),
 
-    getAllLoan: adminProdecure.query(async ({ ctx }) => {
-        const { db } = ctx;
+    getAllLoan: adminProdecure
+        .input(
+            z.object({
+                nama: z.string().optional(),
+                status: z
+                    .enum([
+                        LoanStatus.PENDING,
+                        LoanStatus.APPROVED,
+                        LoanStatus.REJECTED,
+                        LoanStatus.RETURNED,
+                    ])
+                    .optional(),
+                returnDate: z.date().optional(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const { db } = ctx;
+            const { nama, status, returnDate } = input;
+            const startOfDay = returnDate
+                ? new Date(returnDate.setHours(0, 0, 0, 0))
+                : undefined;
+            const endOfDay = returnDate
+                ? new Date(returnDate.setHours(23, 59, 59, 999))
+                : undefined;
 
-        const data = await db.loan.findMany({
-            include: {
-                loanItems: {
-                    include: {
-                        item: true,
-                    },
+            const data = await db.loan.findMany({
+                where: {
+                    ...(status && { status }),
+                    ...(returnDate && {
+                        returnedAt: {
+                            gte: startOfDay,
+                            lte: endOfDay,
+                        },
+                    }),
+                    ...(nama && {
+                        user: {
+                            name: {
+                                contains: nama,
+                            },
+                        },
+                    }),
                 },
-                user: true,
-            },
-            orderBy: {
-                createdAt: "asc",
-            },
-        });
+                include: {
+                    loanItems: {
+                        include: {
+                            item: true,
+                        },
+                    },
+                    user: true,
+                },
+                orderBy: {
+                    createdAt: "asc",
+                },
+            });
 
-        return data;
-    }),
+            return data;
+        }),
 
     borrow: privateProcedure
         .input(
@@ -214,45 +257,84 @@ export const loanRouter = createTRPCRouter({
             const { db, user } = ctx;
             const adminId = user?.id;
 
-            const loan = await db.loan.findUnique({
-                where: { id: input },
-            });
-
-            if (!loan)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Peminjaman tidak ditemukan",
+            const verifiedLoan = await db.$transaction(async (tx) => {
+                const loan = await tx.loan.findUnique({
+                    where: { id: input },
+                    include: {
+                        user: true,
+                    },
                 });
 
-            if (loan.status !== LoanStatus.PENDING)
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Peminjaman sudah diverifikasi",
+                if (!loan)
+                    throw new TRPCError({
+                        code: "NOT_FOUND",
+                        message: "Peminjaman tidak ditemukan",
+                    });
+
+                if (loan.status !== LoanStatus.PENDING)
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Peminjaman sudah diverifikasi",
+                    });
+
+                const verifiedLoan = await tx.loan.update({
+                    where: {
+                        id: input,
+                    },
+                    data: {
+                        status: LoanStatus.APPROVED,
+                        verifiedBy: adminId,
+                    },
                 });
 
-            const verifiedLoan = await db.loan.update({
-                where: {
-                    id: input,
-                },
-                data: {
-                    status: LoanStatus.APPROVED,
-                    verifiedBy: adminId,
-                },
+                const html = await pretty(
+                    await render(
+                        React.createElement(LoanConfirmationEmail, {
+                            loanId: loan.id,
+                            userName: loan.user.name,
+                        }),
+                    ),
+                );
+
+                const { data, error } = await resend.emails.send({
+                    from: "noreply@stapin.site",
+                    to: [loan.user.email],
+                    subject: "Pinjaman Dikonfirmasi",
+                    html: html,
+                });
+
+                if (error) {
+                    console.log(error);
+                    throw new TRPCError({
+                        code: "INTERNAL_SERVER_ERROR",
+                        message: "Gagal mengirim email ke user",
+                    });
+                }
+
+                return verifiedLoan;
             });
+
             return verifiedLoan;
         }),
 
     rejectLoanReqById: adminProdecure
-        .input(z.string())
+        .input(
+            z.object({
+                loanId: z.string(),
+                alasan: z.string(),
+            }),
+        )
         .mutation(async ({ ctx, input }) => {
             const { db, user } = ctx;
+            const { loanId, alasan } = input;
             const adminId = user?.id;
 
             const rejected = await db.$transaction(async (tx) => {
                 const loan = await tx.loan.findUnique({
-                    where: { id: input },
+                    where: { id: loanId },
                     include: {
                         loanItems: true,
+                        user: true,
                     },
                 });
                 if (!loan)
@@ -284,13 +366,39 @@ export const loanRouter = createTRPCRouter({
 
                 const rejectedLoan = await tx.loan.update({
                     where: {
-                        id: input,
+                        id: loanId,
                     },
                     data: {
                         status: LoanStatus.REJECTED,
                         verifiedBy: adminId,
                     },
                 });
+
+                const html = await pretty(
+                    await render(
+                        React.createElement(LoanRejectionEmail, {
+                            loanId: loan.id,
+                            userName: loan.user.name,
+                            alasan: alasan,
+                        }),
+                    ),
+                );
+
+                const { data, error } = await resend.emails.send({
+                    from: "noreply@stapin.site",
+                    to: [loan.user.email],
+                    subject: "Pinjaman Ditolak",
+                    html: html,
+                });
+
+                if (error) {
+                    console.log(error);
+                    throw new TRPCError({
+                        code: "INTERNAL_SERVER_ERROR",
+                        message: "Gagal mengirim email ke user",
+                    });
+                }
+
                 return rejectedLoan;
             });
 
