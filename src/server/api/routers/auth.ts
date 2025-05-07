@@ -2,8 +2,6 @@ import { z } from "zod";
 import { createTRPCRouter, privateProcedure, publicProcedure } from "../trpc";
 import { supabaseAdminClient } from "~/lib/supabase/server";
 import { supabaseDefaultClient } from "~/lib/supabase/client";
-import { createServerClient } from "@supabase/ssr";
-import { env } from "~/env";
 
 export const authRouter = createTRPCRouter({
     register: publicProcedure

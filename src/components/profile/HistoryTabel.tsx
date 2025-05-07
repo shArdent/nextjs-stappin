@@ -14,8 +14,6 @@ const HistoryTabel = () => {
 
     if (!data || data.length === 0) return <h1>Belum ada data</h1>;
 
-    console.log(data);
-
     return (
         <table className="w-full border-separate border-spacing-0">
             <thead className="rounded bg-gray-200">
@@ -46,7 +44,7 @@ const HistoryTabel = () => {
                     <tr
                         onClick={() => router.push(`/loan/${e.id}`)}
                         key={e.id}
-                        className={`border border-black text-center transition hover:bg-gray-300 cursor-pointer`}
+                        className={`cursor-pointer border border-black text-center transition hover:bg-gray-300`}
                     >
                         <td className="border border-black p-2 text-center">
                             {i + 1}

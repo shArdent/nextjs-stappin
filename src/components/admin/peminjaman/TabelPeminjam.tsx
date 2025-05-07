@@ -35,7 +35,7 @@ const TabelPeminjam = ({
             },
         });
 
-        if (!data) return <Skeleton className="h-40 w-full" />;
+    if (!data) return <Skeleton className="h-40 w-full" />;
 
     if (data && data.length === 0) {
         return (
@@ -93,9 +93,7 @@ const TabelPeminjam = ({
                         <td className="border border-black p-2 text-center">
                             <div className="w-ful flex justify-center gap-4">
                                 <Button
-                                    disabled={
-                                         approveIsPending
-                                    }
+                                    disabled={approveIsPending}
                                     onClick={() => approve(e.id)}
                                     className="bg-green-500 hover:bg-green-500/80"
                                 >

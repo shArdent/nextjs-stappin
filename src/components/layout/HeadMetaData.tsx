@@ -5,12 +5,10 @@ import { env } from "~/env";
 export const HeadMetaData: React.FC<{
   title?: string;
   metaDescription?: string;
-  // ogImageUrl?: string;
   pathname?: string;
 }> = ({
   title = "Solusi Praktikum IoT",
   metaDescription,
-  // ogImageUrl = env.NEXT_PUBLIC_OG_IMAGE_URL,
   pathname = "",
 }) => {
   const defaultTitle = "Stapin";

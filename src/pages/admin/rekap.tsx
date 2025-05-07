@@ -11,7 +11,7 @@ const rekap = () => {
         returnDate: undefined,
     });
 
-    const { data, refetch } = api.loan.getAllLoan.useQuery({
+    const { data } = api.loan.getAllLoan.useQuery({
         nama: filters.nama,
         status: filters.status,
         returnDate: filters.returnDate
@@ -29,9 +29,6 @@ const rekap = () => {
         }));
     };
 
-    const handleFilter = () => {
-        refetch();
-    };
     return (
         <AdminLayout>
             <div className="flex w-full flex-col gap-7 px-10 py-5">
@@ -52,7 +49,7 @@ const rekap = () => {
                             name="nama"
                             value={filters.nama ?? ""}
                             onChange={handleChange}
-                            className="bg-white rounded border px-3 py-2"
+                            className="rounded border bg-white px-3 py-2"
                         />
                     </div>
 
@@ -62,7 +59,7 @@ const rekap = () => {
                             name="status"
                             value={filters.status ?? ""}
                             onChange={handleChange}
-                            className="bg-white rounded border px-3 py-2"
+                            className="rounded border bg-white px-3 py-2"
                         >
                             <option value="">Semua</option>
                             {Object.values(LoanStatus).map((status) => (
@@ -82,7 +79,7 @@ const rekap = () => {
                             name="returnDate"
                             value={filters.returnDate ?? ""}
                             onChange={handleChange}
-                            className="bg-white rounded border px-3 py-2"
+                            className="rounded border bg-white px-3 py-2"
                         />
                     </div>
                 </div>

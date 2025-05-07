@@ -32,7 +32,6 @@ const login = () => {
 
             await router.replace("/catalog");
         } catch (error) {
-            console.log(error);
             switch ((error as AuthError).code) {
                 case SupabaseAuthErrorCode.invalid_credentials:
                     form.setError("email", {

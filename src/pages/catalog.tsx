@@ -10,7 +10,7 @@ const Page = () => {
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedQuery(searchQuery);
-        }, 500); // delay 500ms
+        }, 500);
 
         return () => {
             clearTimeout(handler);

@@ -7,7 +7,6 @@ export const AuthRoute = (props: PropsWithChildren) => {
 
     const getUser = async () => {
         const { data } = await supabase.auth.getUser();
-        console.log(data);
         if (!data.user) {
             router.push("/");
         }

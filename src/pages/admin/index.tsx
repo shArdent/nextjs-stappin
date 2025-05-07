@@ -1,5 +1,4 @@
-import { Loader } from "lucide-react";
-import React, { useEffect } from "react";
+import { Box, History, Loader } from "lucide-react";
 import BarangChartPerMonth from "~/components/admin/dashboard/BarangChartPerMonth";
 import DataChart from "~/components/admin/dashboard/DataChart";
 import StatCard from "~/components/admin/dashboard/StatCard";
@@ -8,10 +7,6 @@ import { api } from "~/utils/api";
 
 const index = () => {
     const { data, isLoading } = api.item.getDashboard.useQuery();
-
-    useEffect(() => {
-        console.log(data);
-    }, [data]);
 
     return (
         <AdminLayout>
@@ -26,13 +21,13 @@ const index = () => {
                         isLoading={isLoading}
                     />
                     <StatCard
-                        Icon={Loader}
+                        Icon={Box}
                         label="Total Jumlah Jenis Barang"
                         value={data?.itemCount._count}
                         isLoading={isLoading}
                     />
                     <StatCard
-                        Icon={Loader}
+                        Icon={History}
                         label="Jumlah Peminjaman Pending"
                         value={data?.loanPendingCount._count}
                         isLoading={isLoading}
