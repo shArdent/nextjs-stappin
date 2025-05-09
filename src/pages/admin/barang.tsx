@@ -10,7 +10,7 @@ import { api } from "~/utils/api";
 const barang = () => {
     const [search, setSearch] = useState("");
 
-    const { data, isPending } = api.item.getItems.useQuery({
+    const { data } = api.item.getItems.useQuery({
         query: search === "" ? undefined : search,
     });
 

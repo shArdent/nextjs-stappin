@@ -1,3 +1,4 @@
+import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import AjukanDialog from "~/components/cart/AjukanDialog";
 import { DatePicker } from "~/components/layout/common/DatePicker";
@@ -14,6 +15,7 @@ type loanRequest = {
 };
 
 const loanConfirm = () => {
+    const router = useRouter();
     const { data } = api.cart.getChartByUserId.useQuery();
     const [startDate, setStartDate] = useState<Date>();
     const [endDate, setEndDate] = useState<Date>();
@@ -73,6 +75,7 @@ const loanConfirm = () => {
                 <Button
                     variant={"secondary"}
                     className="flex-1 bg-gray-200 hover:bg-gray-200/80"
+                    onClick={() => router.push("/catalog")}
                 >
                     Batalkan Peminjaman
                 </Button>
