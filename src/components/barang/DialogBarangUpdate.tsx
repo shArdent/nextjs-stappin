@@ -83,9 +83,9 @@ export default function DialogBarangUpdate({
             </DialogTrigger>
             <DialogContent className="bg-white sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Tambah Barang</DialogTitle>
+                    <DialogTitle>Edit Barang</DialogTitle>
                     <DialogDescription>
-                        Tambahkan barang baru untuk peminjam
+                        Ubah data barang yang tersedia
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
