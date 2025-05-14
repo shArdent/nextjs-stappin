@@ -43,7 +43,11 @@ export const cartRouter = createTRPCRouter({
                     },
                 });
 
-                if (!itemData || itemData.available < input.quantity) {
+                if (
+                    !itemData ||
+                    itemData.available === 0 ||
+                    itemData.available < input.quantity
+                ) {
                     throw new TRPCError({
                         code: "BAD_REQUEST",
                         message: "Barang tidak tersedia",

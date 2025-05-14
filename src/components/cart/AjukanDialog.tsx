@@ -34,10 +34,8 @@ const AjukanDialog = ({
             toast.success("Berhasil melakukan pengajuan");
             router.push(`/loan/${data.loanId}`);
         },
-        onError: () => {
-            toast.error(
-                "Terjadi masalah saat melakukan pengajuan, coba lagi nanti",
-            );
+        onError: (error) => {
+            toast.error(error.message);
         },
     });
 

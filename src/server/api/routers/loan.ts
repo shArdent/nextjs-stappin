@@ -199,6 +199,7 @@ export const loanRouter = createTRPCRouter({
                     },
                     select: {
                         id: true,
+                        name: true,
                         available: true,
                     },
                 });
@@ -207,11 +208,9 @@ export const loanRouter = createTRPCRouter({
                     dbItems.map((item) => [item.id, item.available]),
                 );
 
-                console.log(dbItemMap);
-
                 for (const reqItem of reqItems) {
                     const stock = dbItemMap.get(reqItem.itemId);
-                    if (!stock || stock < reqItem.quantity) {
+                    if (!stock || stock < reqItem.quantity || stock === 0) {
                         throw new TRPCError({
                             code: "BAD_REQUEST",
                             message:

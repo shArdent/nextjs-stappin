@@ -13,9 +13,10 @@ const ProductCard = ({ item }: { item: Item }) => {
             util.item.getItems.invalidate();
             util.cart.getChartByUserId.invalidate();
         },
-        onError: () => {
+        onError: (error) => {
+            console.log(error.message);
             toast.error(
-                "Gagal menambahkan barang ke keranajang. Coba beberapa saat lagi",
+                error.message,
             );
         },
     });
