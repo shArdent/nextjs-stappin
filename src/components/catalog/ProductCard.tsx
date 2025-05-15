@@ -4,10 +4,16 @@ import { Button } from "../ui/button";
 import { api } from "~/utils/api";
 import { toast } from "sonner";
 
-const ProductCard = ({ item }: { item: Item }) => {
+const ProductCard = ({
+    item,
+    isDisabled,
+}: {
+    item: Item;
+    isDisabled: boolean;
+}) => {
     const util = api.useUtils();
 
-    const { mutate, isPending } = api.cart.addToChart.useMutation({
+    const { mutate } = api.cart.addToChart.useMutation({
         onSuccess: () => {
             toast.success("Berhasil menambahkan barang ke keranjang");
             util.item.getItems.invalidate();
@@ -15,12 +21,9 @@ const ProductCard = ({ item }: { item: Item }) => {
         },
         onError: (error) => {
             console.log(error.message);
-            toast.error(
-                error.message,
-            );
+            toast.error(error.message);
         },
     });
-
     return (
         <div className="flex flex-col justify-between gap-3 rounded border border-[#DBDBDB] p-5">
             <Image
@@ -33,6 +36,7 @@ const ProductCard = ({ item }: { item: Item }) => {
             <h1 className="text-lg font-semibold">{item.name}</h1>
             <p className="text-sm">Tersedia: {item.available}</p>
             <Button
+                disabled={isDisabled}
                 variant={"yellow"}
                 onClick={() => mutate({ itemId: item.id, quantity: 1 })}
             >

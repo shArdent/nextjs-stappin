@@ -25,7 +25,11 @@ const Page = () => {
                 <h1 className="text-3xl font-bold">Katalog</h1>
                 <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
                     {data?.items.map((item) => (
-                        <ProductCard item={item} key={item.id} />
+                        <ProductCard
+                            item={item}
+                            key={item.id}
+                            isDisabled={item.available < 1}
+                        />
                     ))}
                 </div>
             </div>

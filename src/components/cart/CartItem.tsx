@@ -52,6 +52,9 @@ const CartItem = ({
                 <p className="text-sm">{cartItem.item.description}</p>
                 <div className="flex w-full items-center justify-between">
                     <p className="text-sm">Kuantitas: {cartItem.quantity}</p>
+                    <p className="text-sm">
+                        Tersedia: {cartItem.item.available}
+                    </p>
 
                     <div className="flex items-center">
                         <button
